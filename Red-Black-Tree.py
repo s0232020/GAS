@@ -10,10 +10,10 @@ def createTreeItem(key, value):
     return TreeItem(key, value)
 
 class Node:
-    def __init__(self, key, val, color = True, left = None, right = None, parent = None):
+    def __init__(self, key, val, color=True, left=None, right=None, parent=None):
         self.key = key
         self.val = val
-        self.color = color
+        self.color = color  # True = red, False = black
         self.left = left
         self.right = right
         self.parent = parent
@@ -25,77 +25,87 @@ class RedBlackTree:
 
     def insertItem(self, item):
         node = Node(item.key, item.value)
-        node.parent = None
-        node.item = item
         node.left = self.NIL
         node.right = self.NIL
-        node.color = True  # new node must be red
+        node.color = True  # New nodes are red
 
-        y = None
-        x = self.root
-
-        while x != self.NIL:
-            y = x
-            if node.item.key < x.item.key:
-                x = x.left
-            else:
-                x = x.right
-
-        # y is parent of x
-        node.parent = y
-        if y is None:
+        if self.root == self.NIL:
+            # If the tree is empty, insert the first node and make it black
             self.root = node
-        elif node.item.key < y.item.key:
-            y.left = node
+            node.color = False  # The root must always be black
+            return
+
+        current = self.root
+        parent = None
+
+        # Traverse down the tree to find the insertion point
+        while current != self.NIL:
+            parent = current
+
+            # Recolor and rotate if necessary before moving down
+            if current.left.color and current.right.color:
+                self.recolor_and_rotate(current)
+
+            # Move down the tree
+            if node.key < current.key:
+                current = current.left
+            else:
+                current = current.right
+
+        # Insert the new node
+        node.parent = parent
+        if node.key < parent.key:
+            parent.left = node
         else:
-            y.right = node
+            parent.right = node
 
-        # if new node is a root node, simply return
-        if node.parent is None:
-            node.color = False
-            return
-
-        # if the grandparent is None, simply return
-        if node.parent.parent is None:
-            return
-
-        # Fix the tree
+        # Fix potential violations caused by the insertion
         self.fix_insert(node)
 
-    def fix_insert(self, k):
-        while k.parent.color:
-            if k.parent == k.parent.parent.right:
-                u = k.parent.parent.left  # uncle
-                if u.color:
-                    u.color = False
-                    k.parent.color = False
-                    k.parent.parent.color = True
-                    k = k.parent.parent
-                else:
-                    if k == k.parent.left:
-                        k = k.parent
-                        self.right_rotate(k)
-                    k.parent.color = False
-                    k.parent.parent.color = True
-                    self.left_rotate(k.parent.parent)
-            else:
-                u = k.parent.parent.right  # uncle
+    def recolor_and_rotate(self, node):
+        # Recolor the current node and its children
+        node.color = True
+        if node.left != self.NIL:
+            node.left.color = False
+        if node.right != self.NIL:
+            node.right.color = False
 
-                if u.color:
-                    u.color = False
-                    k.parent.color = False
-                    k.parent.parent.color = True
-                    k = k.parent.parent
+        # If the current node's parent is red, we may need to rotate
+        if node.parent and node.parent.color:
+            self.fix_insert(node)
+
+    def fix_insert(self, node):
+        while node != self.root and node.parent.color:  # While the parent is red
+            if node.parent == node.parent.parent.left:
+                uncle = node.parent.parent.right
+                if uncle.color:  # Case 1: Uncle is red
+                    node.parent.color = False
+                    uncle.color = False
+                    node.parent.parent.color = True
+                    node = node.parent.parent
                 else:
-                    if k == k.parent.right:
-                        k = k.parent
-                        self.left_rotate(k)
-                    k.parent.color = False
-                    k.parent.parent.color = True
-                    self.right_rotate(k.parent.parent)
-            if k == self.root:
-                break
-        self.root.color = False
+                    if node == node.parent.right:  # Case 2: Node is a right child
+                        node = node.parent
+                        self.left_rotate(node)
+                    node.parent.color = False
+                    node.parent.parent.color = True
+                    self.right_rotate(node.parent.parent)
+            else:
+                uncle = node.parent.parent.left
+                if uncle.color:  # Case 1: Uncle is red
+                    node.parent.color = False
+                    uncle.color = False
+                    node.parent.parent.color = True
+                    node = node.parent.parent
+                else:
+                    if node == node.parent.left:  # Case 2: Node is a left child
+                        node = node.parent
+                        self.right_rotate(node)
+                    node.parent.color = False
+                    node.parent.parent.color = True
+                    self.left_rotate(node.parent.parent)
+
+        self.root.color = False  # The root must always be black
 
     def save(self):
         return self._save(self.root)
@@ -152,3 +162,22 @@ class RedBlackTree:
             self.inorderTraverse(func, node.left)
             func(node.key)
             self.inorderTraverse(func, node.right)
+
+
+
+# Test the tree
+t = RedBlackTree()
+t.insertItem(createTreeItem(5, 5))
+t.insertItem(createTreeItem(10, 10))
+t.insertItem(createTreeItem(2, 2))
+t.insertItem(createTreeItem(12, 12))
+t.insertItem(createTreeItem(15, 15))
+t.insertItem(createTreeItem(1, 1))
+t.insertItem(createTreeItem(3, 3))
+t.insertItem(createTreeItem(4, 4))
+t.insertItem(createTreeItem(16, 16))
+t.insertItem(createTreeItem(13, 13))
+t.inorderTraverse(print)
+print(t.save())
+# {'root': 5, 'color': 'black', 'children': [{'root': 2, 'color': 'black', 'children': [{'root': 1, 'color': 'black'}, {'root': 3, 'color': 'black', 'children': [None, {'root': 4, 'color': 'red'}]}]}, {'root': 12, 'color': 'black', 'children': [{'root': 10, 'color': 'black'}, {'root': 15, 'color': 'black', 'children': [{'root': 13, 'color': 'red'}, {'root': 16, 'color': 'red'}]}]}]}
+# {'root': 5, 'color': 'black', 'children': [{'root': 2, 'color': 'black', 'children': [{'root': 1, 'color': 'black'}, {'root': 3, 'color': 'black', 'children': [None, {'root': 4, 'color': 'red'}]}]}, {'root': 12, 'color': 'black', 'children': [{'root': 10, 'color': 'black'}, {'root': 15, 'color': 'black', 'children': [{'root': 13, 'color': 'red'}, {'root': 16, 'color': 'red'}]}]}]}
